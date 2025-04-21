@@ -3,7 +3,7 @@ client = OpenAI()
 
 response = client.responses.create(
     model = "gpt-4o-mini"
-    input= userInput
+    input= "placeholder"
     )
 
 print(response.output_text)

@@ -8,3 +8,4 @@ Success Criteria:
   - Randomly generated interviewer profile/background
   - AI Interviewer responds in generated voice
   - Interview questions is based on user inputted job role
+  - Zoom-like interface showing user webcam video and possibly AI generated video for interviewer
