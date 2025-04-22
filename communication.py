@@ -1,25 +1,12 @@
 from RealtimeSTT import AudioToTextRecorder
 from RealtimeTTS import TextToAudioStream, SystemEngine , GTTSEngine
 
+def user_turn():
+    with AudioToTextRecorder() as recorder:
+        recorder.post_speech_silence_duration = 5
+        return recorder.text()
 
-
-def process_text(text):
-    print(text)
-
-
-
-"""if __name__ == '__main__':
-    to_print = ""
-    print("wait")
-    recorder = AudioToTextRecorder()
-
-    while True:
-        recorder.text(process_text)
-        if keyboard.is_pressed('q'):
-            print(to_print)
-            break"""
-        
-engine = SystemEngine() # replace with your TTS engine
-stream = TextToAudioStream(engine)
-stream.feed("Hello world! How are you today?")
-stream.play()
+def interviewer_turn(text, engine= SystemEngine()):
+    stream = TextToAudioStream(engine)
+    stream.feed(text)
+    stream.play_async()
