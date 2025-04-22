@@ -2,6 +2,7 @@ import sys
 from openai import OpenAI
 from PyQt6 import QtWidgets, QtMultimedia, QtMultimediaWidgets
 import interview
+import os
 
 
 
@@ -87,7 +88,7 @@ class MainWindow(QtWidgets.QMainWindow):
         self.resume_btn = QtWidgets.QPushButton("Upload Resume (.pdf)", clicked = self.upload_resume)
 
         self.submit_settings_btn = QtWidgets.QPushButton("Submit Settings", clicked = self.submit_settings)
-
+        self.begin_interview_btn = QtWidgets.QPushButton("Begin Interview", clicked = self.begin_interview)
 
         widget_layout1.addWidget(self.api_key_label)
         widget_layout1.addWidget(self.api_key_input)
@@ -103,6 +104,7 @@ class MainWindow(QtWidgets.QMainWindow):
         widget_layout1.addWidget(self.resume_btn)
         widget_layout1.addWidget(self.follow_up_checkbox)
         widget_layout1.addWidget(self.submit_settings_btn)
+        widget_layout1.addWidget(self.begin_interview_btn)
 
         widget_layout1.addStretch()
 
@@ -146,7 +148,7 @@ class MainWindow(QtWidgets.QMainWindow):
             )
         except Exception as error:
             errorMsg = QtWidgets.QMessageBox()
-            errorMsg.setText(f"Invalid API Key, network error or out of credits. {error}")
+            errorMsg.setText(f"Invalid API Key, network error or out of credits: \n {error}")
             errorMsg.setIcon(QtWidgets.QMessageBox.Icon.Critical)
             errorMsg.exec()
         else:
@@ -157,6 +159,7 @@ class MainWindow(QtWidgets.QMainWindow):
 
     def submit_api_key(self,api_key):
         api_key = self.api_key_input.text()
+        print(api_key,"a")
         self.role_input.setReadOnly(False)
         self.industry_input.setReadOnly(False)
         self.role_input.setStyleSheet("background-color: white;")
@@ -184,6 +187,10 @@ class MainWindow(QtWidgets.QMainWindow):
         self.InterviewInstance.role = self.role_input.text()
         self.InterviewInstance.questions_no = self.questions_no.value()
         self.InterviewInstance.follow_up = self.follow_up_checkbox.isChecked()
+
+    def begin_interview(self):
+        self.InterviewInstance.begin_interview()
+        self.InterviewInstance.log.close()
 
 
 app = QtWidgets.QApplication(sys.argv)

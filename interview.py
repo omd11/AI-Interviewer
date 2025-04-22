@@ -1,19 +1,22 @@
 from openai import OpenAI
 import communication
 import random
+import os
     
 class InterviewSession():
     def __init__(self, api_key: str):
-        self.interview_gen = OpenAI(api_key=api_key)
+        self.api_key = api_key
+        print(self.api_key,"b")
+        self.interview_gen = OpenAI(api_key=self.api_key)
         self.difficulty = None
         self.industry = None
         self.role = None
         self.questions_no = None
         self.resume_uploaded = False
         self.follow_up = False
-        self.overall_evaluation = list()
-        self.log = open("interview_log.txt", "a")
-        self.log.write("New Interview Session\n")
+        self.overall_evaluation = None
+        self.interviewer = None
+
         
         self.questions = []
 
@@ -23,30 +26,33 @@ class InterviewSession():
         self.current_answer = 0
 
     def setup_interviewer(self):
-        self.interviewer = Interviewer(self.interview_gen,difficulty=self.difficulty, industry=self.industry, role=self.role)
+        self.interviewer = Interviewer(self.interview_gen, self.difficulty, self.industry, self.role,self.log,self.questions,self.current_question,self.overall_evaluation)
 
     def setup_questions(self):
-        self.questions = list(self.interview_gen.responses.create(
+        self.interviewer.questions = self.questions = self.interview_gen.responses.create(
             model="gpt-4o-mini",
             input=f"create a list of {self.questions_no} interview questions for the {self.industry} industry for the role of {self.role}. \
-            The output should be a python list of strings and should be written as if asked in the first person \
+            The output should be a python list of strings delimited by '|' instead of ',' and should be written as if asked in the first person \
                 . If {self.resume_uploaded} = True, 1 or more questions may be related work experience, skills or projects as listed in the resume.\
             The questions should be relevant to the {self.industry} industry, the {self.role} role and should be appropriate for the \
-            {self.difficulty} difficulty level."
-        ).output_text)
+            {self.difficulty} difficulty level. The output should not contain any variable declaration, equality signs or square brackets."
+        ).output_text.split("|")
 
     def begin_interview(self):
+        self.log = open("interview_log.txt", "a")
+        self.log.write("New Interview Session\n")
+        self.overall_evaluation = []
         self.setup_interviewer()
         self.setup_questions()
         self.interviewer.introduction()
 
-
+        print(self.current_question)
         while self.current_question < len(self.questions):
             self.interviewer.ask_question(self.current_question)
             answer = communication.user_turn()
             self.log.write(f"Interviewee: {answer}\n")
             
-            if self.followup:
+            if self.follow_up:
                 match self.difficulty:
                     case "Easy":
                         self.interviewer.evaluate_answer(answer)
@@ -92,23 +98,25 @@ class InterviewSession():
 
 
 class Interviewer(InterviewSession):
-    def __init__(self, interview_gen, difficulty, industry, role,overall_evaluation,log):
-        super().__init__(difficulty, industry, role,overall_evaluation,log)
+    def __init__(self, interview_gen=None, difficulty=None, industry=None, role=None,log=None,questions=None,current_question=None,overall_evaluation =None):
         self.interview_gen = interview_gen
         self.difficulty = difficulty
         self.industry = industry
         self.role = role
-        self.overall_evaluation = overall_evaluation
         self.log = log
+        self.questions = questions
+        self.current_question = current_question
+        self.overall_evaluation = overall_evaluation
+
         
 
         self.interviewer_persona = self.interview_gen.responses.create(
         model="gpt-4o-mini",
         input=f"Create a persona for an interviewer in the {self.industry} industry for the role of {self.role}. \
-        The output should be a python list strings. The first string should be the name of the interviewer, the second string should be a short description of the interviewer's goals,\
+        The output should be a python list delimited with '|' instead of ',' . The first string should be the name of the interviewer, the second string should be a short description of the interviewer's goals,\
         the third string should be a short description of the interviewer's personality traits, and the fourth string should be a short description of the interviewer's interview style.\
         The interviewer's goals, personality traits and interview style should be relevant to the {self.industry} industry, the {self.role} role and should be appropriate for the \
-        {self.difficulty} difficulty level.").output_text
+        {self.difficulty} difficulty level. The output should only be the list, without any variable, equality signs or square brackets").output_text.split("|")
 
         self.interviewer_name = self.interviewer_persona[0]
         self.interviewer_goals = self.interviewer_persona[1]
@@ -120,14 +128,14 @@ class Interviewer(InterviewSession):
             self.log.write(f"Interviewer: {self.questions[qno]}\n")
 
     def evaluate_answer(self,answer):
-        response = list(self.interview_gen.responses.create(
+        response = self.interview_gen.responses.create(
             model="gpt-4o-mini",
             input=f"From the perspective of the interviewer and taking into consideration their goals: ({self.interviewer_goals}), their personality traits: ({self.interviewer_personality}) \
             and their interview style: ({self.interviewer_style}), acknowledge or make a comment about the following interviewee answer: ({answer}). This answer is in respond to your question\
             {self.questions[self.current_question]}. Your response should be a string in the first entry of a Python list. In the second entry of the python list should be an evaluation score of the \
             response from 1-10. In the third entry of the python list should be a short description of the strengths and weaknesses of the answer. In the fourth entry of the python list should \
             be a short description of how the answer could be improved. The evaluation should be relevant to the {self.industry} industry, the {self.role} role and should be appropriate for the \
-            {self.difficulty} difficulty level.").output_text)
+            {self.difficulty} difficulty level. The output should only be the list delimited with '|' instead of ',' , without any variable, equality signs or square brackets").output_text.split("|")
         self.overall_evaluation.extend(response[1:])
         self.log.write(f"Interviewer: {response[0]}\n")
         communication.interviewer_turn(response[0])
@@ -136,11 +144,8 @@ class Interviewer(InterviewSession):
         intro = self.interview_gen.responses.create(
         model="gpt-4o-mini",
         input=f"You are {self.interviewer_name}, a job interviewer in the {self.industry} industry for the role of {self.role}. \
-        Introduce yourself to your interviewee. ").output_text
-
+        Introduce yourself to your interviewee in one paragraph").output_text
+        print(f"Interviewer: {intro}\n")
         self.log.write(f"Interviewer: {intro}\n")
-        communication(self.interview_gen.responses.create(
-        model="gpt-4o-mini",
-        input=f"You are {self.interviewer_name}, a job interviewer in the {self.industry} industry for the role of {self.role}. \
-        Introduce yourself to your interviewee. ").output_text)
+        communication.interviewer_turn(intro)
 
