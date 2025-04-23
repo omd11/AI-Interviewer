@@ -85,10 +85,13 @@ class MainWindow(QtWidgets.QMainWindow):
             self.capsesh.setVideoOutput(self.webcam_widget)
             self.camera.start()
 
+
         self.resume_btn = QtWidgets.QPushButton("Upload Resume (.pdf)", clicked = self.upload_resume)
 
         self.submit_settings_btn = QtWidgets.QPushButton("Submit Settings", clicked = self.submit_settings)
         self.begin_interview_btn = QtWidgets.QPushButton("Begin Interview", clicked = self.begin_interview)
+
+        self.debug_checkbox = QtWidgets.QCheckBox(text="Debug Mode")
 
         widget_layout1.addWidget(self.api_key_label)
         widget_layout1.addWidget(self.api_key_input)
@@ -189,11 +192,22 @@ class MainWindow(QtWidgets.QMainWindow):
         self.InterviewInstance.follow_up = self.follow_up_checkbox.isChecked()
 
     def begin_interview(self):
-        self.InterviewInstance.begin_interview()
-        self.InterviewInstance.log.close()
+        self.transcript_form = Transcript()
+        self.transcript_form.show()
+        self.InterviewInstance.begin_interview(self.transcript_form)
+    
+
+
 
 
 app = QtWidgets.QApplication(sys.argv)
+
+class Transcript(QtWidgets.QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.transcript_label = QtWidgets.QLabel()
+        self.setCentralWidget(self.transcript_label)
+        
 
 
 mainForm  = MainWindow()
